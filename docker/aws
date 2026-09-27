@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Debian bookworm ships AWS CLI 2.9, which predates reliable support for
+# AWS_ENDPOINT_URL. Transparently route S3 commands to the swarm endpoint.
+if [[ "${1:-}" == "s3" || "${1:-}" == "s3api" ]]; then
+  endpoint="${AWS_ENDPOINT_URL_S3:-${AWS_ENDPOINT_URL:-}}"
+  if [[ -n "$endpoint" ]]; then
+    exec /usr/bin/aws --endpoint-url "$endpoint" "$@"
+  fi
+fi
+exec /usr/bin/aws "$@"

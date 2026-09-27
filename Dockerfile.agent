@@ -1,0 +1,43 @@
+FROM node:22.23.2-bookworm
+
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    awscli \
+    bash \
+    build-essential \
+    ca-certificates \
+    curl \
+    git \
+    jq \
+    procps \
+    python3 \
+    python3-pip \
+    ripgrep \
+    tini \
+    unzip \
+    util-linux \
+    zip \
+  && rm -rf /var/lib/apt/lists/* \
+  && npm install --global pnpm@10.15.1 \
+  && yarn --version
+
+RUN curl -fsSL https://foundry.paradigm.xyz | bash \
+  && /root/.foundry/bin/foundryup --install v1.8.1 \
+  && install -m 0755 /root/.foundry/bin/forge /usr/local/bin/forge \
+  && install -m 0755 /root/.foundry/bin/cast /usr/local/bin/cast \
+  && install -m 0755 /root/.foundry/bin/anvil /usr/local/bin/anvil \
+  && install -m 0755 /root/.foundry/bin/chisel /usr/local/bin/chisel
+
+WORKDIR /opt/agent-swarm-harness
+COPY docker/harness-package.json package.json
+RUN npm install --omit=dev --no-audit --no-fund \
+  && ln -s /opt/agent-swarm-harness/node_modules/.bin/pi /usr/local/bin/pi \
+  && printf '{"piVersion":"0.84.4"}\n' > .agent-swarm-template-v1
+
+COPY docker/agent-entrypoint.sh /usr/local/bin/agent-swarm-agent-entrypoint
+COPY docker/aws /usr/local/bin/aws
+RUN chmod 0755 /usr/local/bin/agent-swarm-agent-entrypoint /usr/local/bin/aws
+
+WORKDIR /workspace/repo
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/agent-swarm-agent-entrypoint"]
+CMD ["sleep", "infinity"]

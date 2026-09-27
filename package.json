@@ -1,0 +1,28 @@
+{
+  "name": "agent-swarm",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Run coordinated AI coding agents in isolated containers with shared S3-compatible state.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json && cp -R runtime/pi-config dist/runtime/",
+    "typecheck": "tsc -p tsconfig.json --noEmit && npm run check:pi",
+    "check:pi": "tsc --noEmit --allowJs --checkJs --module nodenext --moduleResolution nodenext --target es2022 --skipLibCheck runtime/pi-agent.mjs",
+    "test": "vitest --run",
+    "swarm": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.84.4",
+    "dockerode": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.44",
+    "@types/node": "24.10.1",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}

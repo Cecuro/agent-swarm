@@ -1,0 +1,11 @@
+.git
+.swarm
+.swarm-vm-data
+.env
+secrets
+runtime/pi-config/auth.json
+dist
+node_modules
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

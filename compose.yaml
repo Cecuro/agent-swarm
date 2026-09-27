@@ -1,0 +1,34 @@
+name: agent-swarm
+
+services:
+  swarm:
+    build:
+      context: .
+    image: agent-swarm-controller:local
+    environment:
+      SWARM_AGENT_IMAGE: ${SWARM_AGENT_IMAGE:-agent-swarm-agent:local}
+      SWARM_CONTROLLER_IMAGE: ${SWARM_CONTROLLER_IMAGE:-agent-swarm-controller:local}
+      SWARM_MINIO_IMAGE: ${SWARM_MINIO_IMAGE:-quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z}
+      SWARM_DOCKER_NETWORK: ${SWARM_DOCKER_NETWORK:-agent-swarm-runtime}
+      SWARM_WORKSPACE_DIR: /data/workspaces
+      SWARM_HOST_WORKSPACE_DIR: ${SWARM_HOST_WORKSPACE_DIR:-${PWD}/.swarm-vm-data/workspaces}
+    volumes:
+      - ${SWARM_DATA_DIR:-./.swarm-vm-data}:/data
+      - ${SWARM_CONTEXT_DIR:-./contexts}:/contexts:ro
+      - ${SWARM_SECRET_DIR:-./secrets}:/run/secrets:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: /app
+    user: "0:0"
+    networks:
+      - runtime
+
+  agent-image:
+    profiles: ["image"]
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    image: agent-swarm-agent:local
+
+networks:
+  runtime:
+    name: ${SWARM_DOCKER_NETWORK:-agent-swarm-runtime}

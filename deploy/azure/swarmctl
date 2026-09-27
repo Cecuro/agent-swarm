@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+project_dir="${AGENT_SWARM_PROJECT_DIR:-/opt/agent-swarm}"
+compose_env="${AGENT_SWARM_COMPOSE_ENV:-/etc/agent-swarm/compose.env}"
+compose=(docker compose --env-file "$compose_env" --project-directory "$project_dir" -f "$project_dir/compose.yaml")
+cli=(node dist/src/cli.js)
+state=(--data-dir /data)
+
+case "${1:-help}" in
+  build)
+    exec "${compose[@]}" build swarm agent-image
+    ;;
+  run)
+    shift
+    swarm_id="${1:?usage: swarmctl run SWARM_ID [run options]}"
+    shift
+    unit="agent-swarm-${swarm_id//[^A-Za-z0-9_.-]/-}"
+    exec systemd-run \
+      --unit "$unit" \
+      --collect \
+      --description "Agent swarm ${swarm_id}" \
+      --property Type=exec \
+      --working-directory "$project_dir" \
+      /usr/bin/docker compose --env-file "$compose_env" --project-directory "$project_dir" -f "$project_dir/compose.yaml" \
+      run --rm swarm "${cli[@]}" run "$swarm_id" "${state[@]}" "$@"
+    ;;
+  logs)
+    shift
+    swarm_id="${1:?usage: swarmctl logs SWARM_ID}"
+    unit="agent-swarm-${swarm_id//[^A-Za-z0-9_.-]/-}"
+    exec journalctl -u "$unit" -f
+    ;;
+  units)
+    exec systemctl list-units 'agent-swarm-*' --all
+    ;;
+  help|-h|--help)
+    cat <<'EOF'
+Usage:
+  swarmctl build
+  swarmctl COMMAND [ARGS...]      run an ordinary swarm CLI command
+  swarmctl run SWARM_ID [ARGS...] launch a run as a detached systemd unit
+  swarmctl logs SWARM_ID          follow the detached run
+  swarmctl units                  list detached runs
+
+Swarm state and artifacts live under /var/lib/agent-swarm.
+EOF
+    ;;
+  *)
+    command="$1"
+    shift
+    exec "${compose[@]}" run --rm swarm "${cli[@]}" "$command" "${state[@]}" "$@"
+    ;;
+esac
